@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduOpportunity Bot Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-blue-600 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-xl font-bold">🎓 EduOpportunity Bot</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button @click="currentView = 'dashboard'" 
+                                :class="currentView === 'dashboard' ? 'bg-blue-700' : ''"
+                                class="px-3 py-2 rounded-md text-sm font-medium">
+                            Dashboard
+                        </button>
+                        <button @click="currentView = 'opportunities'" 
+                                :class="currentView === 'opportunities' ? 'bg-blue-700' : ''"
+                                class="px-3 py-2 rounded-md text-sm font-medium">
+                            Opportunities
+                        </button>
+                        <button @click="currentView = 'create'" 
+                                :class="currentView === 'create' ? 'bg-blue-700' : ''"
+                                class="px-3 py-2 rounded-md text-sm font-medium">
+                            Create Opportunity
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Dashboard View -->
+            <div v-if="currentView === 'dashboard'" class="space-y-6">
+                <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">📊</span>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Total Opportunities</dt>
+                                        <dd class="text-lg font-medium text-gray-900">{{ stats.total_opportunities || 0 }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">✅</span>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Active Opportunities</dt>
+                                        <dd class="text-lg font-medium text-gray-900">{{ stats.active_opportunities || 0 }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">👥</span>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Total Subscribers</dt>
+                                        <dd class="text-lg font-medium text-gray-900">{{ stats.total_subscribers || 0 }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">📈</span>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">This Month</dt>
+                                        <dd class="text-lg font-medium text-gray-900">{{ stats.this_month || 0 }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Opportunities View -->
+            <div v-if="currentView === 'opportunities'" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">My Opportunities</h2>
+                    <button @click="currentView = 'create'" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                        Create New
+                    </button>
+                </div>
+                
+                <div class="bg-white shadow overflow-hidden sm:rounded-md">
+                    <ul class="divide-y divide-gray-200">
+                        <li v-for="opportunity in opportunities" :key="opportunity.id" class="px-6 py-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-medium text-gray-900">{{ opportunity.title }}</h3>
+                                    <p class="text-sm text-gray-500">{{ opportunity.organization }}</p>
+                                    <p class="text-sm text-gray-600 mt-1">{{ opportunity.description.substring(0, 100) }}...</p>
+                                    <div class="mt-2 flex space-x-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {{ opportunity.opportunity_type }}
+                                        </span>
+                                        <span v-if="opportunity.deadline" class="text-xs text-gray-500">
+                                            Deadline: {{ new Date(opportunity.deadline).toLocaleDateString() }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button @click="editOpportunity(opportunity)" 
+                                            class="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                                        Edit
+                                    </button>
+                                    <button @click="deleteOpportunity(opportunity.id)" 
+                                            class="text-red-600 hover:text-red-900 text-sm font-medium">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Create Opportunity View -->
+            <div v-if="currentView === 'create'" class="space-y-6">
+                <h2 class="text-2xl font-bold text-gray-900">Create New Opportunity</h2>
+                
+                <div class="bg-white shadow sm:rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <form @submit.prevent="createOpportunity" class="space-y-6">
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Title</label>
+                                    <input v-model="newOpportunity.title" 
+                                           type="text" 
+                                           required
+                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Organization</label>
+                                    <input v-model="newOpportunity.organization" 
+                                           type="text" 
+                                           required
+                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea v-model="newOpportunity.description" 
+                                          rows="4" 
+                                          required
+                                          class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Type</label>
+                                    <select v-model="newOpportunity.opportunity_type" 
+                                            required
+                                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="scholarship">Scholarship</option>
+                                        <option value="learning_resource">Learning Resource</option>
+                                        <option value="event">Event</option>
+                                        <option value="mentorship">Mentorship</option>
+                                        <option value="funding">Funding</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Location</label>
+                                    <input v-model="newOpportunity.location" 
+                                           type="text"
+                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Deadline</label>
+                                    <input v-model="newOpportunity.deadline" 
+                                           type="datetime-local"
+                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">URL</label>
+                                <input v-model="newOpportunity.url" 
+                                       type="url"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
+                                <input v-model="tagsInput" 
+                                       type="text"
+                                       placeholder="AI, Machine Learning, Python"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            </div>
+                            
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" 
+                                        @click="currentView = 'opportunities'"
+                                        class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    Cancel
+                                </button>
+                                <button type="submit" 
+                                        :disabled="isCreating"
+                                        class="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                                    {{ isCreating ? 'Creating...' : 'Create Opportunity' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    currentView: 'dashboard',
+                    stats: {},
+                    opportunities: [],
+                    newOpportunity: {
+                        title: '',
+                        description: '',
+                        organization: '',
+                        opportunity_type: 'scholarship',
+                        location: '',
+                        deadline: '',
+                        url: '',
+                        language: 'en'
+                    },
+                    tagsInput: '',
+                    isCreating: false,
+                    creatorId: 1 // This would come from authentication
+                }
+            },
+            async mounted() {
+                await this.loadStats();
+                await this.loadOpportunities();
+            },
+            methods: {
+                async loadStats() {
+                    try {
+                        const response = await axios.get(`/api/v1/dashboard/stats?creator_id=${this.creatorId}`);
+                        this.stats = response.data;
+                    } catch (error) {
+                        console.error('Error loading stats:', error);
+                    }
+                },
+                async loadOpportunities() {
+                    try {
+                        const response = await axios.get(`/api/v1/dashboard/opportunities?creator_id=${this.creatorId}`);
+                        this.opportunities = response.data;
+                    } catch (error) {
+                        console.error('Error loading opportunities:', error);
+                    }
+                },
+                async createOpportunity() {
+                    this.isCreating = true;
+                    try {
+                        const opportunityData = {
+                            ...this.newOpportunity,
+                            tags: this.tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag),
+                            requirements: [],
+                            benefits: []
+                        };
+                        
+                        await axios.post(`/api/v1/dashboard/opportunities?creator_id=${this.creatorId}`, opportunityData);
+                        
+                        // Reset form
+                        this.newOpportunity = {
+                            title: '',
+                            description: '',
+                            organization: '',
+                            opportunity_type: 'scholarship',
+                            location: '',
+                            deadline: '',
+                            url: '',
+                            language: 'en'
+                        };
+                        this.tagsInput = '';
+                        
+                        // Reload data
+                        await this.loadStats();
+                        await this.loadOpportunities();
+                        
+                        // Switch to opportunities view
+                        this.currentView = 'opportunities';
+                        
+                        alert('Opportunity created successfully!');
+                    } catch (error) {
+                        console.error('Error creating opportunity:', error);
+                        alert('Error creating opportunity. Please try again.');
+                    } finally {
+                        this.isCreating = false;
+                    }
+                },
+                editOpportunity(opportunity) {
+                    // Implementation for editing opportunity
+                    console.log('Edit opportunity:', opportunity);
+                },
+                async deleteOpportunity(opportunityId) {
+                    if (confirm('Are you sure you want to delete this opportunity?')) {
+                        try {
+                            await axios.delete(`/api/v1/dashboard/opportunities/${opportunityId}?creator_id=${this.creatorId}`);
+                            await this.loadStats();
+                            await this.loadOpportunities();
+                            alert('Opportunity deleted successfully!');
+                        } catch (error) {
+                            console.error('Error deleting opportunity:', error);
+                            alert('Error deleting opportunity. Please try again.');
+                        }
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
