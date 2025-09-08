@@ -157,3 +157,207 @@ class BotSession(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+# -----------------------------
+# Extensions for advanced features
+# -----------------------------
+
+
+class InteractionType(str, enum.Enum):
+    """User interactions with opportunities for personalization"""
+    CLICK = "click"
+    IGNORE = "ignore"
+    SHARE = "share"
+    SUBSCRIBE = "subscribe"
+    APPLY = "apply"
+
+
+class UserInteraction(Base):
+    """Log of user interactions to learn preferences over time"""
+    __tablename__ = "user_interactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=False)
+    action = Column(Enum(InteractionType), nullable=False)
+    context = Column(JSON, default=dict)  # e.g., platform, message_id
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ApplicationStatus(str, enum.Enum):
+    """Status of an application to an opportunity"""
+    DRAFT = "draft"
+    APPLIED = "applied"
+    IN_PROGRESS = "in_progress"
+    INTERVIEW = "interview"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    WITHDRAWN = "withdrawn"
+
+
+class OpportunityApplication(Base):
+    """Track a user's application to an opportunity"""
+    __tablename__ = "opportunity_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=False)
+    status = Column(Enum(ApplicationStatus), default=ApplicationStatus.DRAFT, nullable=False)
+    applied_at = Column(DateTime(timezone=True), nullable=True)
+    deadline = Column(DateTime(timezone=True), nullable=True)
+    last_updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    notes = Column(Text, nullable=True)
+    metadata = Column(JSON, default=dict)  # links, submission ids
+
+    # Relationships
+    user = relationship("User")
+    opportunity = relationship("Opportunity")
+
+
+class ReminderType(str, enum.Enum):
+    DEADLINE = "deadline"
+    FOLLOW_UP = "follow_up"
+    STATUS_UPDATE = "status_update"
+
+
+class Reminder(Base):
+    """Scheduled reminders (e.g., deadlines)"""
+    __tablename__ = "reminders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=True)
+    reminder_type = Column(Enum(ReminderType), nullable=False)
+    remind_at = Column(DateTime(timezone=True), nullable=False)
+    payload = Column(JSON, default=dict)
+    sent = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class GroupRole(str, enum.Enum):
+    OWNER = "owner"
+    MEMBER = "member"
+
+
+class CollaborationGroup(Base):
+    """Groups for sharing opportunities (scholarships, events, competitions)"""
+    __tablename__ = "collab_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_active = Column(Boolean, default=True)
+
+    # Relationships
+    members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
+
+
+class GroupMember(Base):
+    """Membership of users in collaboration groups"""
+    __tablename__ = "group_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("collab_groups.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role = Column(Enum(GroupRole), default=GroupRole.MEMBER, nullable=False)
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    group = relationship("CollaborationGroup", back_populates="members")
+    user = relationship("User")
+
+
+class GroupSharedOpportunity(Base):
+    """Opportunities shared within a group"""
+    __tablename__ = "group_shared_opportunities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("collab_groups.id"), nullable=False)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=False)
+    shared_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Badge(Base):
+    """Skill badge definition (verifiable credential-like)"""
+    __tablename__ = "badges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    tags = Column(JSON, default=list)
+    criteria = Column(Text, nullable=True)
+    issuer = Column(String(255), nullable=True)  # org or verifier
+    metadata = Column(JSON, default=dict)  # optional blockchain/VC pointers
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class UserBadge(Base):
+    """Badges earned by a user (Skill Passport)"""
+    __tablename__ = "user_badges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    badge_id = Column(Integer, ForeignKey("badges.id"), nullable=False)
+    issued_at = Column(DateTime(timezone=True), server_default=func.now())
+    proof_url = Column(String(500), nullable=True)
+    verifier = Column(String(255), nullable=True)
+    metadata = Column(JSON, default=dict)
+
+    # Relationships
+    user = relationship("User")
+    badge = relationship("Badge")
+
+
+class ChallengeDifficulty(str, enum.Enum):
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+
+
+class SkillChallenge(Base):
+    """Micro-courses, projects, or challenges for earning badges"""
+    __tablename__ = "skill_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    tags = Column(JSON, default=list)
+    difficulty = Column(Enum(ChallengeDifficulty), default=ChallengeDifficulty.BEGINNER)
+    estimated_hours = Column(Integer, nullable=True)
+    reward_badge_id = Column(Integer, ForeignKey("badges.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    reward_badge = relationship("Badge")
+
+
+class ChallengeStatus(str, enum.Enum):
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    VERIFIED = "verified"
+    FAILED_VERIFICATION = "failed_verification"
+
+
+class UserChallengeProgress(Base):
+    """User progress on challenges"""
+    __tablename__ = "user_challenge_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    challenge_id = Column(Integer, ForeignKey("skill_challenges.id"), nullable=False)
+    status = Column(Enum(ChallengeStatus), default=ChallengeStatus.NOT_STARTED)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    evidence_urls = Column(JSON, default=list)
+    reviewer_notes = Column(Text, nullable=True)
+
+    # Relationships
+    user = relationship("User")
+    challenge = relationship("SkillChallenge")
